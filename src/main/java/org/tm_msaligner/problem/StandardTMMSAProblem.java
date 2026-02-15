@@ -1,14 +1,20 @@
 package org.tm_msaligner.problem;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.biojava.nbio.core.exceptions.CompoundNotFoundException;
 import org.biojava.nbio.core.sequence.ProteinSequence;
 import org.biojava.nbio.core.sequence.io.FastaReaderHelper;
@@ -16,6 +22,7 @@ import org.biojava.nbio.core.sequence.io.FastaWriterHelper;
 import org.tm_msaligner.solution.TM_MSASolution;
 import org.uma.jmetal.util.JMetalLogger;
 import org.uma.jmetal.util.errorchecking.JMetalException;
+
 import org.tm_msaligner.util.AAArray;
 
 public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASolution> {
@@ -25,10 +32,6 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
   public List<StringBuilder> listOfSequenceNames;
   public long[] MaxMinSegmentAlignScore;
 
-
-  /**
-   * Constructor
-   */
   public StandardTMMSAProblem(String msaProblemFileName, List<String> preComputedFiles)
       throws IOException {
 
@@ -37,55 +40,16 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
           "Wrong number of Pre-computed Alignments, Minimum 2 files are required");
     }
 
-    //Read SeqNames, Sequences and TopologyPrediction
     readSequenceFromFile(msaProblemFileName);
     setNumberOfVariables(originalSequences.size());
     MaxMinSegmentAlignScore = getMaxMinScoreSegmentAlign();
     listOfPrecomputedStringAlignments = readPreComputedAlignments(preComputedFiles);
-
   }
 
-  /*public List<TM_MSASolution> createInitialPopulation(int Size) {
-    List<TM_MSASolution> population = new ArrayList<TM_MSASolution>(Size);
-
-    JMetalRandom randomGenerator = JMetalRandom.getInstance();
-
-    for (List<AAArray> sequenceList : listOfPrecomputedStringAlignments) {
-
-      TM_MSASolution newIndividual = new TM_MSASolution(sequenceList, this);
-      population.add(newIndividual);
-    }
-
-    int parent1, parent2;
-    List<TM_MSASolution> children, parents;
-    SPXMSACrossover crossover = new SPXMSACrossover(1);
-
-    while (population.size() < Size) {
-      parents = new ArrayList<TM_MSASolution>();
-
-      parent1 = randomGenerator.nextInt(0, population.size() - 1);
-      do {
-        parent2 = randomGenerator.nextInt(0, population.size() - 1);
-      } while (parent1 == parent2);
-      parents.add(population.get(parent1));
-      parents.add(population.get(parent2));
-
-      children = crossover.execute(parents);
-
-      population.add(children.get(0));
-      population.add(children.get(1));
-    }
-    return population;
-  }*/
-
-  /**
-   * Read data from a FASTA file
-   */
-  public List<List<AAArray>> readPreComputedAlignments(List<String> dataFiles) {
+   public List<List<AAArray>> readPreComputedAlignments(List<String> dataFiles) {
     List<List<AAArray>> listPreAlignments = new ArrayList<List<AAArray>>();
     for (String dataFile : dataFiles) {
       try {
-
         List<AAArray> seqAligned = readDataFromFastaFile(dataFile);
         TM_MSASolution sol = new TM_MSASolution(seqAligned, this);
         if (!sol.isValid()) {
@@ -93,7 +57,6 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
         } else {
           listPreAlignments.add(seqAligned);
         }
-
       } catch (Exception e) {
         throw new JMetalException(
             "Error reading data from fasta files " + dataFile + ". Message: " + e);
@@ -107,17 +70,6 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
     return listPreAlignments;
   }
 
-  public void printConsoleOriginalSequences() {
-    for (int i = 0; i < originalSequences.size(); i++) {
-      System.out.println(listOfSequenceNames.get(i));
-      originalSequences.get(i).printConsole();
-    }
-
-  }
-
-  /**
-   * Read data from a FASTA file
-   */
   public List<AAArray> readDataFromFastaFile(String dataFile)
       throws IOException {
 
@@ -136,7 +88,6 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
   public List<StringBuilder> getListOfSequenceNames() {
     return listOfSequenceNames;
   }
-
 
   public List<StringBuilder> readSeqNameFromAlignment(String dataFile)
       throws IOException, CompoundNotFoundException {
@@ -163,9 +114,7 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
     FastaWriterHelper.writeProteinSequence(new File(fileName), proteinSequences);
   }
 
-
   public long[] getMaxMinScoreSegmentAlign() {
-
     long[] MaxMinScores = new long[2];
     long MaxScore = 0, MinScore = 0;
     AAArray seq;
@@ -180,7 +129,6 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
         } else {
           MaxScore += 2 * (numSeqs - i - 1);
         }
-
       }
     }
     MaxMinScores[0] = MaxScore;
@@ -188,16 +136,9 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
     return MaxMinScores;
   }
 
+  public TM_MSASolution evaluate(TM_MSASolution tm_msaSolution) { return null; }
+  public TM_MSASolution createSolution() { return null; }
 
-  public TM_MSASolution evaluate(TM_MSASolution tm_msaSolution) {
-    return null;
-  }
-
-  public TM_MSASolution createSolution() {
-    return null;
-  }
-
-  /*Read MSA with Names, Sequences and TopologyPrediction*/
   void readSequenceFromFile(String file) {
     originalSequences = new ArrayList<AAArray>();
     listOfSequenceNames = new ArrayList<StringBuilder>();
@@ -212,7 +153,6 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
       for (line = in.readLine(); line != null; line = in.readLine()) {
         line = line.trim();
         if (status == 0) {
-
           if (line.length() > 0 && line.charAt(0) == '>') {
             posSepName = line.indexOf('|');
             listOfSequenceNames.add(new StringBuilder(
@@ -220,10 +160,8 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
           } else {
             throw new IOException("Name of Sequence must starts with '>'");
           }
-
           status = 1;
         } else if (status == 1) {
-
           regiones = in.readLine().trim();
           if (regiones == null) {
             throw new IOException("Regions of Sequence is empty");
@@ -234,10 +172,7 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
 
           originalSequences.add(new AAArray(line, regiones));
           status = 0;
-
         }
-
-
       }
 
       if (originalSequences.size() != listOfSequenceNames.size()) {
@@ -248,8 +183,6 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
       System.out.println("Error when reading " + file);
       e.printStackTrace();
     }
-
-
   }
 
   public int getSizeOfOriginalSequence(int i) {
@@ -261,5 +194,4 @@ public class StandardTMMSAProblem extends AbstractGenericTM_MSAProblem<TM_MSASol
       return 0;
     }
   }
-
 }

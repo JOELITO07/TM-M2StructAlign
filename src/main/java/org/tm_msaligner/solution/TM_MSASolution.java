@@ -134,18 +134,21 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
     while (i < size) {
       if (g < gapsGroups.size()) {
         if (i < gapsGroups.get(g)) {
-          alignedSequence[i++] = OriginalSeq[k++];
+          alignedSequence[i++] = new AA(OriginalSeq[k++]);
         } else {
           for (l = gapsGroups.get(g); l <= gapsGroups.get(g + 1); l++) {
-            alignedSequence[l] = new AA(AA.GAP_IDENTIFIER,
-                    OriginalSeq[k > 0 ? k-1 : 0].getType(),
-                    OriginalSeq[k < OriginalSeq.length ? k : k-1].getType());
+                AA gap = new AA(AA.GAP_IDENTIFIER,
+                                OriginalSeq[k > 0 ? k-1 : 0].getType(),
+                                OriginalSeq[k < OriginalSeq.length ? k : k-1].getType());
+                gap.setSeqIndex(-1);
+                gap.setStructIndex(-1);
+                alignedSequence[l] = gap;
           }
           i += gapsGroups.get(g + 1) - gapsGroups.get(g) + 1;
           g += 2;
         }
       } else {
-        alignedSequence[i++] = OriginalSeq[k++];
+        alignedSequence[i++] = new AA(OriginalSeq[k++]);
       }
     }
 
@@ -473,6 +476,8 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
   public int getAlignmentLength() {
     return problem.getSizeOfOriginalSequence(0) + getNumberOfGaps(0);
   }
+
+    
 
 
 }
