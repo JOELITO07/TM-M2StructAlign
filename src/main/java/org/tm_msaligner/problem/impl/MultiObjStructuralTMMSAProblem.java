@@ -4,15 +4,15 @@ package org.tm_msaligner.problem.impl;
 import java.io.IOException;
 import java.util.List;
 import org.tm_msaligner.problem.StructuralTMMSAProblem;
-import org.tm_msaligner.score.Score;
-import org.tm_msaligner.solution.TM_MSASolution;
+import org.tm_msaligner.score.StructuralScore;
+import org.tm_msaligner.solution.StructuralTM_MSASolution;
 import org.tm_msaligner.util.AA;
 
 public class MultiObjStructuralTMMSAProblem extends StructuralTMMSAProblem {
 
-  private final List<Score> scoreList;
+  private final List<StructuralScore> scoreList;
 
-  public MultiObjStructuralTMMSAProblem(String msaProblemFileName, List<Score> scoreList,
+  public MultiObjStructuralTMMSAProblem(String msaProblemFileName, List<StructuralScore> scoreList,
       List<String> preComputedFiles, String distanceDatasetDir, String Name) throws IOException {
     super(msaProblemFileName, preComputedFiles, distanceDatasetDir);
 
@@ -23,7 +23,7 @@ public class MultiObjStructuralTMMSAProblem extends StructuralTMMSAProblem {
   }
 
   @Override
-  public TM_MSASolution evaluate(TM_MSASolution solution) {
+  public StructuralTM_MSASolution evaluate(StructuralTM_MSASolution solution) {
     solution.removeGapColumns();
     AA[][] decodedSequences = solution.decodeToMatrix();
 

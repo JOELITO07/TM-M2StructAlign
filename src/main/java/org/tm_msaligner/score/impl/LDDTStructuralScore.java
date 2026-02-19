@@ -1,12 +1,10 @@
 package org.tm_msaligner.score.impl;
 
-
-import org.tm_msaligner.score.Score;
+import org.tm_msaligner.score.StructuralScore;
 import org.tm_msaligner.solution.StructuralTM_MSASolution;
-import org.tm_msaligner.solution.TM_MSASolution;
 import org.tm_msaligner.util.AA;
 
-public class LDDTStructuralScore implements Score {
+public class LDDTStructuralScore implements StructuralScore {
 
   
   private final float R0;                
@@ -17,7 +15,7 @@ public class LDDTStructuralScore implements Score {
   }
 
   @Override
-  public <S extends TM_MSASolution> double compute(S solution, AA[][] msa) {
+  public <S extends StructuralTM_MSASolution> double compute(S solution, AA[][] msa) {
 
     int M = solution.variables().size();
     int L = solution.getAlignmentLength();
