@@ -48,7 +48,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         }*/
 
         String dataDirectory = "D:\\Nube\\TM-MSA\\Datasets\\GPCRdb" ; // args[0]; // "data/gpcrdb/classA"
-        String problemName = "classA_002"; // args[1]; // "classA"
+        String problemName = "classT2"; // args[1]; // "classA"
         Integer maxEvaluations = 250; //Integer.parseInt(args[2]);  //25000
         Integer populationSize = 10; //Integer.parseInt(args[3]); //100
         Integer numberOfCores = 1;   //Integer.parseInt(args[4]);   //1
