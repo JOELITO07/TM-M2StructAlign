@@ -510,4 +510,55 @@ public class StructuralTM_MSASolution extends AbstractSolution<List<Integer>> {
     return problem.getSizeOfOriginalSequence(0) + getNumberOfGaps(0);
   }
 
+  /**
+ * col: alignment column (0-based)
+ * returns: seq position in original ungapped sequence (1-based), or -1 if this column is a gap.
+ */
+  public int getSeqPos1BasedAtColumn(int seqIdx, int col) {
+    List<Integer> gg = variables().get(seqIdx);
+    if (gg == null || gg.isEmpty()) {
+      return col + 1; // no gaps
+    }
+
+    int gapsBefore = 0;
+
+    for (int j = 0; j < gg.size(); j += 2) {
+      int gStart = gg.get(j);
+      int gEnd   = gg.get(j + 1);
+
+      if (col < gStart) break;     // no more gaps before col
+      if (col <= gEnd) return -1;  // col is a gap
+
+      gapsBefore += (gEnd - gStart + 1);
+    }
+
+    return (col + 1) - gapsBefore;
+  }
+
+  public boolean isTMAtColumn(int seqIdx, int col) {
+      int pos1 = getSeqPos1BasedAtColumn(seqIdx, col);
+      if (pos1 <= 0) return false; // gap
+
+      int pos0 = pos1 - 1;
+      AAArray original = getOriginalSequences().get(seqIdx);
+
+      if (pos0 < 0 || pos0 >= original.getSize()) return false;
+
+      AA aa = original.AAAt(pos0);
+      return aa != null && aa.getType() != null && aa.getType().isTMRegion();
+}
+
+/**
+ * Column risk indicator R(c): true if the cut at column c may sever a TM helix
+ * (simple version: if any sequence has a TM residue at that column).
+ */
+  public boolean riskIndicatorR(int col) {
+    for (int s = 0; s < variables().size(); s++) {
+      if (isTMAtColumn(s, col)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 }

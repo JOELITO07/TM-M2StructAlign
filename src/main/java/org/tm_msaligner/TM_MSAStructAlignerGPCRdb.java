@@ -4,6 +4,7 @@ package org.tm_msaligner;
 import org.tm_msaligner.algorithm.multiobjective.TM_M2AlignBuilder;
 import org.tm_msaligner.algorithm.structural_multiobjective.StructuralTM_M2Align;
 import org.tm_msaligner.algorithm.structural_multiobjective.StructuralTM_M2AlignBuilder;
+import org.tm_msaligner.crossover.BioSPXMSACrossover;
 import org.tm_msaligner.mutation.BioShiftClosedGapsMSAMutation;
 import org.tm_msaligner.mutation.ShiftClosedGapsMSAMutation;
 import org.tm_msaligner.problem.StandardTMMSAProblem;
@@ -49,8 +50,8 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
 
         String dataDirectory = "D:\\Nube\\TM-MSA\\Datasets\\GPCRdb" ; // args[0]; // "data/gpcrdb/classA"
         String problemName = "classT2"; // args[1]; // "classA"
-        Integer maxEvaluations = 250; //Integer.parseInt(args[2]);  //25000
-        Integer populationSize = 10; //Integer.parseInt(args[3]); //100
+        Integer maxEvaluations = 2500; //Integer.parseInt(args[2]);  //25000
+        Integer populationSize = 100; //Integer.parseInt(args[3]); //100
         Integer numberOfCores = 1;   //Integer.parseInt(args[4]);   //1
         //0: Ninguno 1: FitnessWriteFileObserver, 2: FitnessPlotObserver y 3: FrontPlotTM_MSAObserve
         int observerType = 1; //Integer.parseInt(args[5]);
@@ -60,6 +61,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         //Algorithm  Parameters
         double probabilityCrossover=0.8;
         double probabilityMutation=0.2;
+        double alpha = 0.8; 
         var weightGapOpenTM = 8;
         var weightGapExtendTM = 3;
         var weightGapOpenNonTM = 3;
@@ -97,94 +99,15 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         System.out.println("Number of sequences: " + problem.numberOfVariables());
         
         BioShiftClosedGapsMSAMutation mutationOperator =  new BioShiftClosedGapsMSAMutation(probabilityMutation); 
-
-        /*try {
-        
-               
-
-                List<List<AAArray>> preAlignments = problem.listOfPrecomputedStringAlignments;
-                System.out.println("Precomputed alignments loaded: " + preAlignments.size());
-                int totalTests = 0;
-                int totalFailures = 0;
-
-                // ===============================
-                // 4️⃣  Testear cada alineamiento
-                // ===============================
-                for (int a = 0; a < preAlignments.size(); a++) {
-
-                    System.out.println("\nTesting alignment: " + a);
-
-                    StructuralTM_MSASolution solution =  new StructuralTM_MSASolution(preAlignments.get(a), problem);
-
-                    if (!solution.isValid()) {
-                        System.out.println("Initial solution INVALID!");
-                        continue;
-                    }
-
-                        // ===============================
-                        // 5️⃣  Aplicar muchas mutaciones
-                        // ===============================
-                        for (int i = 0; i < 5000; i++) {
-
-                        totalTests++;
-
-                        try {
-
-                            StructuralTM_MSASolution mutated = solution.copy();
-
-                            mutationOperator.execute(mutated);
-
-                            if (!mutated.isValid()) {
-                                System.out.println("❌ Invalid solution after mutation at iteration " + i);
-                                totalFailures++;
-                            }
-
-                            // Validación extra: longitud consistente
-                            int L = mutated.getAlignmentLength();
-                            for (int s = 0; s < mutated.variables().size(); s++) {
-                            int expected =
-                                    mutated.getOriginalSequences().get(s).getSize()
-                                            + mutated.getNumberOfGaps(s);
-
-                            if (L != expected) {
-                                System.out.println("❌ Length mismatch after mutation");
-                                totalFailures++;
-                            }
-                            }
-
-                        } catch (Exception e) {
-                            System.out.println("💥 Exception during mutation: " + e.getMessage());
-                            e.printStackTrace();
-                            totalFailures++;
-                        }
-                        }
-                    }
-
-            // ===============================
-            // 6️⃣  Reporte final
-            // ===============================
-            System.out.println("\n================================");
-            System.out.println("Total mutation tests: " + totalTests);
-            System.out.println("Total failures: " + totalFailures);
-            System.out.println("================================");
-
-            if (totalFailures == 0) {
-                System.out.println("✅ All mutations executed successfully.");
-            } else {
-                System.out.println("⚠ Some mutations failed.");
-            }
-
-        } catch (Exception e) {
-          e.printStackTrace();
-        }*/
-
+        BioSPXMSACrossover crossoverOperator = new BioSPXMSACrossover(probabilityCrossover, alpha);
+    
    
         int offspringPopulationSize = populationSize;
         StructuralTM_M2Align tm_m2align = new StructuralTM_M2AlignBuilder(problem,
                             maxEvaluations,
                             populationSize,
                             offspringPopulationSize,
-                            probabilityCrossover,
+                            crossoverOperator,
                             mutationOperator,
                             numberOfCores)
                             .build();
@@ -213,7 +136,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         }
 
 
-        tm_m2align.run();
+       tm_m2align.run();
         List<StructuralTM_MSASolution> population = tm_m2align.result();
 
         for (StructuralTM_MSASolution solution : population) {

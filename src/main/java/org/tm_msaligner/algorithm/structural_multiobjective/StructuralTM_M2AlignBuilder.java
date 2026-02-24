@@ -49,10 +49,11 @@ public class StructuralTM_M2AlignBuilder {
 
   public StructuralTM_M2AlignBuilder(StructuralTMMSAProblem problem, int maxEvaluations,
       int populationSize, int offspringPopulationSize,
-      double probabilityCrossover, MutationOperator<StructuralTM_MSASolution> mutationOperator,
+      CrossoverOperator<StructuralTM_MSASolution> crossoverOperator, 
+      MutationOperator<StructuralTM_MSASolution> mutationOperator,
       int numCores) {
 
-    crossover = new BioSPXMSACrossover(probabilityCrossover);
+    crossover =crossoverOperator;
     mutation = mutationOperator;
     variation = new CrossoverAndMutationVariation<>(
         offspringPopulationSize, crossover, mutation);

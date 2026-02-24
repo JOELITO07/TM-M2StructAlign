@@ -37,7 +37,7 @@ public class PreComputedStructMSAsSolutionsCreation implements SolutionsCreation
 
     int parent1, parent2;
     List<StructuralTM_MSASolution> children, parents;
-    BioSPXMSACrossover crossover = new BioSPXMSACrossover(1);
+    BioSPXMSACrossover crossover = new BioSPXMSACrossover(1, 0.8);
 
     while (population.size() < numberOfSolutionsToCreate) {
       parents = new ArrayList<StructuralTM_MSASolution>();

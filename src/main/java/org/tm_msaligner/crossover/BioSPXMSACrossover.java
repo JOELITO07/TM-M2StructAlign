@@ -12,12 +12,16 @@ import org.tm_msaligner.solution.StructuralTM_MSASolution;
 public class BioSPXMSACrossover implements CrossoverOperator<StructuralTM_MSASolution> {
   private final JMetalRandom randomGenerator;
   private final double probability;
+  private final double alpha;
 
-  public BioSPXMSACrossover(double probability) {
+  public BioSPXMSACrossover(double probability , double alpha) {
     Check.probabilityIsValid(probability);
-
+    Check.probabilityIsValid(alpha);
+    
     this.randomGenerator = JMetalRandom.getInstance();
     this.probability = probability;
+    this.alpha = alpha;
+
   }
 
   /**
@@ -59,7 +63,8 @@ public class BioSPXMSACrossover implements CrossoverOperator<StructuralTM_MSASol
   private StructuralTM_MSASolution MSACrossover(StructuralTM_MSASolution parentA, StructuralTM_MSASolution parentB) {
     StructuralTM_MSASolution child;
     if (this.randomGenerator.nextDouble() < this.probability) {
-      int cut = selectRandomColumn(parentA);
+      //int cut = selectRandomColumn(parentA);
+      int cut = selectCutWithScanning(parentA);
 
       List<List<Integer>> gapsGroupFirstBloq = new ArrayList<List<Integer>>();
       List<Integer> carsCounterParentA = new ArrayList<Integer>();
@@ -163,17 +168,38 @@ public class BioSPXMSACrossover implements CrossoverOperator<StructuralTM_MSASol
 
       child.mergeGapsGroups();
 
+     
+
     } else {
 
       child = new StructuralTM_MSASolution(parentA);
     }
+
+    
     return child;
   }
 
   /** Select a column randomly */
-  public int selectRandomColumn(StructuralTM_MSASolution solution) {
+ /* public int selectRandomColumn(StructuralTM_MSASolution solution) {
     return randomGenerator.nextInt(1, solution.getAlignmentLength() - 1);
-  }
+  }*/
+
+  private int selectCutWithScanning(StructuralTM_MSASolution sol) {
+        int L = sol.getAlignmentLength();
+        int maxTries = 50;
+
+        for (int t = 0; t < maxTries; t++) {
+          int c = randomGenerator.nextInt(1, L - 1);
+
+          if (sol.isGapColumn(c)) continue;
+          boolean R = sol.riskIndicatorR(c);
+          if (!R) return c;
+
+          if (randomGenerator.nextDouble() < (1.0 - alpha)) return c;
+        }
+
+        return randomGenerator.nextInt(1, L - 1);
+}
 
   public int numberOfRequiredParents() {
     return 2;
