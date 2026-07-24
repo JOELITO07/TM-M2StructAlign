@@ -12,7 +12,7 @@ This project implements a transmembrane protein sequence alignment framework com
 
 The major innovation is the **Structural Aware Alignment** module, which incorporates structural data into alignments and evaluates solutions with metrics such as TM-score, RMSD, or predicted topologies.
 
-## 🔧 Key Features
+## Key Features
 
 1. **Alignment strategies**
    - Reference alignments (`.msf`, `.fasta`) and support for external tools (MAFFT, Kalign, ClustalW, etc.).
@@ -42,7 +42,7 @@ The major innovation is the **Structural Aware Alignment** module, which incorpo
    - Outputs in TSV, FASTA, and MSF formats.
    - Computation of reference fronts (`referenceFronts/*.csv`).
 
-## 🛠 Installation
+## Installation
 
 ```bash
 # Requires Java 17+ and Maven
@@ -57,7 +57,7 @@ The runnable JAR will be in `target/` and can be executed with:
 java -jar target/tm-msaligner.jar [options]
 ```
 
-## 🚀 Usage
+## Usage
 
 Example executions:
 
@@ -81,7 +81,7 @@ Parameters include:
 
 Refer to the documentation in `src/main/java/org/...` for additional details.
 
-## 📁 Repository Structure
+## Repository Structure
 
 - `src/main/java/org/…` – main source code.
 - `resources/…` – example data, benchmarks, and tests.
