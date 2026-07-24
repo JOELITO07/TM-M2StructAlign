@@ -45,7 +45,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
     public static void main(String[] args) throws JMetalException, IOException {
 
         //Parameters
-        if (args.length != 7) {
+        if (args.length != 8) {
             throw new JMetalException("Wrong number of arguments") ;
         }
 
@@ -56,6 +56,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         Integer numberOfCores = Integer.parseInt(args[4]);   //1
         int frequencyObserver = Integer.parseInt(args[5]); //Integer.parseInt(args[6]);*/
         String numberTest = args[6]; //Integer.parseInt(args[6]);*/
+        String outputFolderPath = args[7];
         
         Path disPath = Paths.get(dataDirectory,"distances", problemName);
         String distanceDir = disPath.toString();
@@ -70,7 +71,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         var weightGapExtendNonTM = 1;
 
         Path dataFilePath = Paths.get(dataDirectory,"sequences","tmregions", problemName + "_predicted_topologies.3line");
-        Path outputFolder = Paths.get(dataDirectory, "ejecuciones", problemName, numberTest );
+        Path outputFolder = Paths.get(outputFolderPath, "ejecuciones", problemName, numberTest );
         Path precomputedFolder = Paths.get(dataDirectory, "precomputed", problemName);
 
 

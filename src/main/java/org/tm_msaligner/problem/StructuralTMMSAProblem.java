@@ -62,7 +62,9 @@ public class StructuralTMMSAProblem extends AbstractStructuralTM_MSAProblem<Stru
     annotateOriginalSequencesWithStructure();
 
   }
-  
+
+
+
 
   private void annotateOriginalSequencesWithStructure() {
       if (seqPosToStructPosByIndex == null) return; 
@@ -325,7 +327,144 @@ public class StructuralTMMSAProblem extends AbstractStructuralTM_MSAProblem<Stru
     return listPreAlignments;
   }
 
-  public List<AAArray> readDataFromFastaFile(String dataFile)
+  /**
+   * Reads a precomputed alignment and restores the canonical input order by
+   * matching normalized FASTA identifiers. A trailing .pdb extension is
+   * removed from both input and precomputed identifiers, e.g.
+   * ada2b_human.pdb -> ada2b_human.
+   */
+  public List<AAArray> readDataFromFastaFile(String dataFile) throws IOException {
+    LinkedHashMap<String, ProteinSequence> fastaSequences =
+            FastaReaderHelper.readFastaProteinSequence(new File(dataFile));
+
+    Map<String, AAArray> sequencesById = new HashMap<>();
+    for (Map.Entry<String, ProteinSequence> entry : fastaSequences.entrySet()) {
+      ProteinSequence protein = entry.getValue();
+      String header = protein.getOriginalHeader();
+      if (header == null || header.isBlank()) {
+        header = entry.getKey();
+      }
+
+      String normalizedId = normalizeProteinId(header);
+      AAArray previous = sequencesById.put(
+              normalizedId,
+              new AAArray(protein.getSequenceAsString()));
+
+      if (previous != null) {
+        throw new JMetalException(
+                "Duplicated normalized protein ID '" + normalizedId + "' in " + dataFile);
+      }
+    }
+
+    List<AAArray> orderedSequences = new ArrayList<>(listOfSequenceNames.size());
+    int expectedAlignmentLength = -1;
+
+    for (int index = 0; index < listOfSequenceNames.size(); index++) {
+      String expectedId = normalizeProteinId(listOfSequenceNames.get(index).toString());
+      AAArray alignedSequence = sequencesById.remove(expectedId);
+
+      if (alignedSequence == null) {
+        throw new JMetalException(
+                "Protein '" + expectedId + "' was not found in precomputed alignment " + dataFile);
+      }
+
+      validateUngappedSequence(
+              expectedId,
+              originalSequences.get(index),
+              alignedSequence,
+              dataFile);
+
+      if (expectedAlignmentLength < 0) {
+        expectedAlignmentLength = alignedSequence.getSize();
+      } else if (alignedSequence.getSize() != expectedAlignmentLength) {
+        throw new JMetalException(
+                "Different aligned sequence lengths in " + dataFile
+                        + ": expected " + expectedAlignmentLength
+                        + " but protein '" + expectedId + "' has " + alignedSequence.getSize());
+      }
+
+      orderedSequences.add(alignedSequence);
+    }
+
+    if (!sequencesById.isEmpty()) {
+      throw new JMetalException(
+              "Unexpected proteins in " + dataFile + ": " + sequencesById.keySet());
+    }
+
+    return orderedSequences;
+  }
+
+  private String normalizeProteinId(String header) {
+    if (header == null) {
+      throw new JMetalException("Null FASTA header");
+    }
+
+    String value = header.trim();
+    if (value.startsWith(">")) {
+      value = value.substring(1).trim();
+    }
+
+    if (value.isEmpty()) {
+      throw new JMetalException("Empty FASTA identifier");
+    }
+
+    // Keep only the identifier token before an optional description.
+    value = value.split("\\s+", 2)[0];
+
+    String[] fields = value.split("\\|");
+    if (fields.length >= 2
+            && ("sp".equalsIgnoreCase(fields[0]) || "tr".equalsIgnoreCase(fields[0]))) {
+      value = fields[1];
+    } else if (fields.length >= 1) {
+      value = fields[0];
+    }
+
+    value = value.trim();
+
+    /*
+     * Remove an optional chain identifier.
+     *
+     * Examples:
+     * ada2b_human.pdb:A -> ada2b_human.pdb
+     * ada2b_human:A     -> ada2b_human
+     */
+    int chainSeparator = value.indexOf(':');
+    if (chainSeparator >= 0) {
+      value = value.substring(0, chainSeparator);
+    }
+
+    value = value.trim();
+    if (value.toLowerCase().endsWith(".pdb")) {
+      value = value.substring(0, value.length() - 4);
+    }
+
+    value = value.trim();
+
+    if (value.isEmpty()) {
+      throw new JMetalException("Empty normalized FASTA identifier derived from header: " + header);
+    }
+
+    return value.toLowerCase();
+  }
+
+  private void validateUngappedSequence(
+          String proteinId,
+          AAArray expected,
+          AAArray aligned,
+          String dataFile) {
+
+    String expectedSequence = expected.toString().replace("-", "").toUpperCase();
+    String alignedSequence = aligned.toString().replace("-", "").toUpperCase();
+
+    if (!expectedSequence.equals(alignedSequence)) {
+      throw new JMetalException(
+              "Ungapped sequence mismatch for protein '" + proteinId + "' in " + dataFile
+                      + ". Expected length=" + expectedSequence.length()
+                      + ", obtained length=" + alignedSequence.length());
+    }
+  }
+
+ /* public List<AAArray> readDataFromFastaFile(String dataFile)
       throws IOException {
 
     List<AAArray> sequenceList = new ArrayList<AAArray>();
@@ -338,7 +477,7 @@ public class StructuralTMMSAProblem extends AbstractStructuralTM_MSAProblem<Stru
     }
 
     return sequenceList;
-  }
+  }*/
 
   public List<StringBuilder> getListOfSequenceNames() {
     return listOfSequenceNames;

@@ -37,7 +37,7 @@ public class LDDTStructuralScore implements StructuralScore {
     int[] columnScoreCount = new int[alignmentLength];
     int[] residuesPerColumn = new int[alignmentLength];
 
-    @SuppressWarnings("unchecked")
+
     Map<Integer, Integer>[] structToColumn = new Map[numberOfSequences];
 
     for (int sequence = 0; sequence < numberOfSequences; sequence++) {
