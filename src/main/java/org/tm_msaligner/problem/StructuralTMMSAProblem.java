@@ -534,48 +534,93 @@ public class StructuralTMMSAProblem extends AbstractStructuralTM_MSAProblem<Stru
   public StructuralTM_MSASolution createSolution() { return null; }
 
   void readSequenceFromFile(String file) {
-    originalSequences = new ArrayList<AAArray>();
-    listOfSequenceNames = new ArrayList<StringBuilder>();
+    originalSequences = new ArrayList<>();
+    listOfSequenceNames = new ArrayList<>();
 
-    try {
-      BufferedReader in = new BufferedReader(new FileReader(file));
+    try (BufferedReader in = Files.newBufferedReader(
+            Path.of(file),
+            StandardCharsets.UTF_8)) {
 
       int status = 0;
-      String line, regiones;
-      int posSepName;
+      String line;
 
-      for (line = in.readLine(); line != null; line = in.readLine()) {
+      while ((line = in.readLine()) != null) {
         line = line.trim();
+
         if (status == 0) {
-          if (line.length() > 0 && line.charAt(0) == '>') {
-            posSepName = line.indexOf('|');
-            listOfSequenceNames.add(new StringBuilder(
-                posSepName > 0 ? line.substring(1, posSepName) : line.substring(1)));
+          if (!line.isEmpty() && line.charAt(0) == '>') {
+            int posSepName = line.indexOf('|');
+
+            listOfSequenceNames.add(
+                    new StringBuilder(
+                            posSepName > 0
+                                    ? line.substring(1, posSepName)
+                                    : line.substring(1)
+                    )
+            );
           } else {
-            throw new IOException("Name of Sequence must starts with '>'");
-          }
-          status = 1;
-        } else if (status == 1) {
-          regiones = in.readLine().trim();
-          if (regiones == null) {
-            throw new IOException("Regions of Sequence is empty");
-          }
-          if (regiones.length() != line.length()) {
-            throw new IOException("Regions of Sequence is empty");
+            throw new IOException(
+                    "Name of sequence must start with '>'"
+            );
           }
 
-          originalSequences.add(new AAArray(line, regiones));
+          status = 1;
+
+        } else {
+          String regions = in.readLine();
+
+          if (regions == null) {
+            throw new IOException(
+                    "Missing topology line for sequence: "
+                            + listOfSequenceNames
+                            .get(listOfSequenceNames.size() - 1)
+            );
+          }
+
+          regions = regions.trim();
+
+          if (regions.length() != line.length()) {
+            throw new IOException(
+                    "Sequence and topology lengths differ for "
+                            + listOfSequenceNames
+                            .get(listOfSequenceNames.size() - 1)
+                            + ": sequence="
+                            + line.length()
+                            + ", topology="
+                            + regions.length()
+            );
+          }
+
+          originalSequences.add(
+                  new AAArray(line, regions)
+          );
+
           status = 0;
         }
       }
 
-      if (originalSequences.size() != listOfSequenceNames.size()) {
-        throw new IOException("Names wiht Sequences are not equals");
+      if (status != 0) {
+        throw new IOException(
+                "Incomplete three-line sequence record at end of file"
+        );
       }
 
-    } catch (IOException e) {
-      System.out.println("Error when reading " + file);
-      e.printStackTrace();
+      if (originalSequences.size()
+              != listOfSequenceNames.size()) {
+
+        throw new IOException(
+                "Number of sequence names differs from number of sequences"
+        );
+      }
+
+    } catch (IOException exception) {
+      throw new JMetalException(
+              "Error reading topology dataset: "
+                      + file
+                      + ". Reason: "
+                      + exception.getMessage(),
+              exception
+      );
     }
   }
 
