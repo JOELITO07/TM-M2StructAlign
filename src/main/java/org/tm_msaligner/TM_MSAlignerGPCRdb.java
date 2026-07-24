@@ -170,7 +170,7 @@ public class TM_MSAlignerGPCRdb extends AbstractAlgorithmRunner {
     }
 
     public static void printMSASolutionsToFile(List<TM_MSASolution> solutionList, String PathOut) {
-        for (int i = 0; i < solutionList.size(); i++)
-            solutionList.get(i).printSolutionToFasta(PathOut + "MSASol" + i + ".fasta");
+        //for (int i = 0; i < solutionList.size(); i++)
+            //solutionList.get(i).printSolutionToFasta(PathOut + "MSASol" + i + ".fasta");
     }
 }

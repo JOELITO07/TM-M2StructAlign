@@ -1,6 +1,5 @@
 package org.tm_msaligner.algorithm.multiobjective;
 
-import org.tm_msaligner.solution.TM_MSASolution;
 import org.uma.jmetal.component.algorithm.EvolutionaryAlgorithm;
 import org.uma.jmetal.component.catalogue.common.evaluation.Evaluation;
 import org.uma.jmetal.component.catalogue.common.solutionscreation.SolutionsCreation;
@@ -8,6 +7,7 @@ import org.uma.jmetal.component.catalogue.common.termination.Termination;
 import org.uma.jmetal.component.catalogue.ea.replacement.Replacement;
 import org.uma.jmetal.component.catalogue.ea.selection.Selection;
 import org.uma.jmetal.component.catalogue.ea.variation.Variation;
+import org.tm_msaligner.solution.TM_MSASolution;
 
 public class TM_M2Align extends EvolutionaryAlgorithm<TM_MSASolution> {
 

@@ -13,6 +13,7 @@ public class MultiObjTMMSAProblem extends StandardTMMSAProblem {
 
   private final List<Score> scoreList;
 
+
   public MultiObjTMMSAProblem(String msaProblemFileName, List<Score> scoreList,
       List<String> preComputedFiles, String Name) throws IOException {
     super(msaProblemFileName, preComputedFiles);
@@ -21,7 +22,7 @@ public class MultiObjTMMSAProblem extends StandardTMMSAProblem {
     setName(Name); // "Multi Objective TM-MSA Problem"
 
     for (int i = 0; i < scoreList.size(); i++) {
-      if (scoreList.get(i).name() == "AlignedSegments") {
+      if (scoreList.get(i).name().equals("AlignedSegments")) {
         AlignedSegment scoreAS = (AlignedSegment) scoreList.get(i);
         if (scoreAS.isNormalized()) {
           scoreAS.setMaxSegmentAlignScore(MaxMinSegmentAlignScore[0]);
@@ -31,6 +32,7 @@ public class MultiObjTMMSAProblem extends StandardTMMSAProblem {
     }
     this.scoreList = scoreList;
   }
+
 
   @Override
   public TM_MSASolution evaluate(TM_MSASolution solution) {

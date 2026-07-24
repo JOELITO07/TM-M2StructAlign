@@ -1,13 +1,13 @@
 package org.tm_msaligner.score.impl;
 
 
-import org.tm_msaligner.score.Score;
-import org.tm_msaligner.solution.TM_MSASolution;
+import org.tm_msaligner.score.StructuralScore;
+import org.tm_msaligner.solution.StructuralTM_MSASolution;
 import org.tm_msaligner.util.substitutionmatrix.impl.Blosum62;
 import org.tm_msaligner.util.substitutionmatrix.impl.Phat;
 import org.tm_msaligner.util.AA;
 
-public class SumOfPairsWithTopologyPredict implements Score {
+public class StructSumOfPairsWithTopologyPredict implements StructuralScore {
 
   public Phat phatMatrix;
   public Blosum62 blosum62Matrix;
@@ -18,7 +18,7 @@ public class SumOfPairsWithTopologyPredict implements Score {
 
   double wSOP = Double.MIN_VALUE;
 
-  public SumOfPairsWithTopologyPredict(
+  public StructSumOfPairsWithTopologyPredict(
       Phat phatMatrix,
       Blosum62 blosum62Matrix,
       double weightGapOpenTM,
@@ -41,7 +41,7 @@ public class SumOfPairsWithTopologyPredict implements Score {
     return "Sum Of Pairs With Topology Prediction";
   }
 
-  public <S extends TM_MSASolution> double compute(S solution, AA[][] decodedSequences) {
+  public <S extends StructuralTM_MSASolution> double compute(S solution, AA[][] decodedSequences) {
     int lengthSequences = solution.getAlignmentLength();
     int numberOfVariables = solution.variables().size();
 
@@ -60,9 +60,9 @@ public class SumOfPairsWithTopologyPredict implements Score {
           if(aaA.isGap() || aaB.isGap()) {
               if(!gapOpen) {
                 gapOpen=true;
-                tmSOP -=  (aaA.getType().isTMRegion() || aaB.getType().isTMRegion())?weightGapOpenTM:weightGapOpenNonTM;
+                tmSOP -=  aaA.getType().isTMRegion()?weightGapOpenTM:weightGapOpenNonTM;
               }else{
-                tmSOP -= (aaA.getType().isTMRegion() || aaB.getType().isTMRegion())?weightGapExtendTM:weightGapExtendNonTM;
+                tmSOP -= aaA.getType().isTMRegion()?weightGapExtendTM:weightGapExtendNonTM;
               }
           }else {
             if (aaA.getType().isTMRegion() && aaB.getType().isTMRegion())

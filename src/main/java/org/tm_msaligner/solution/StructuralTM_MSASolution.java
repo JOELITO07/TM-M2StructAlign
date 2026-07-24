@@ -1,54 +1,62 @@
 package org.tm_msaligner.solution;
 
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import org.uma.jmetal.solution.AbstractSolution;
-import org.uma.jmetal.util.JMetalLogger;
-import org.tm_msaligner.problem.StandardTMMSAProblem;
+import org.tm_msaligner.problem.StructuralTMMSAProblem;
+import org.tm_msaligner.problem.impl.MultiObjStructuralTMMSAProblem;
 import org.tm_msaligner.util.AA;
 import org.tm_msaligner.util.AAArray;
+import org.uma.jmetal.solution.AbstractSolution;
+import org.uma.jmetal.util.JMetalLogger;
 
-public class TM_MSASolution extends AbstractSolution<List<Integer>> {
+public class StructuralTM_MSASolution extends AbstractSolution<List<Integer>> {
 
-  private char[][] decodedSolution;
-  private final StandardTMMSAProblem problem ;
-
-  /** Constructor */
-  public TM_MSASolution(StandardTMMSAProblem problem) {
+  private final StructuralTMMSAProblem problem ;
+ 
+  public StructuralTM_MSASolution(StructuralTMMSAProblem problem) {
     super(problem.numberOfVariables(), problem.numberOfObjectives()) ;
 
     this.problem = problem ;
     setAttributesSeqName(problem.getListOfSequenceNames());
-    decodedSolution = null;
+ 
   }
 
-  public TM_MSASolution(List<AAArray> AlignedSeqs, StandardTMMSAProblem problem) {
+  public StructuralTM_MSASolution(List<AAArray> AlignedSeqs, StructuralTMMSAProblem problem) {
     super(problem.numberOfVariables(), problem.numberOfObjectives()) ;
-    this.problem = problem ;
+    
     setAttributesSeqName(problem.getListOfSequenceNames());
     encode(AlignedSeqs);
-  }
-
-  /** Constructor */
-  public TM_MSASolution(StandardTMMSAProblem problem, List<List<Integer>> gapsGroups) {
-    super(problem.numberOfVariables(), problem.numberOfObjectives()) ;
 
     this.problem = problem ;
+  }
+
+
+
+
+  public StructuralTM_MSASolution(StructuralTMMSAProblem problem, List<List<Integer>> gapsGroups) {
+    super(problem.numberOfVariables(), problem.numberOfObjectives()) ;
 
     for (int i = 0; i < problem.numberOfVariables(); i++) {
       variables().set(i, gapsGroups.get(i));
     }
 
     setAttributesSeqName(problem.getListOfSequenceNames());
+    this.problem = problem ;
   }
 
-  /** Copy Constructor */
-  public TM_MSASolution(TM_MSASolution solution) {
-    super(solution.variables().size(), solution.objectives().length, solution.constraints().length);
-    problem = solution.problem ;
-    for (int i = 0; i < variables().size(); i++) {
 
+  /** Copy Constructor */
+  public StructuralTM_MSASolution(StructuralTM_MSASolution solution) {
+    super(solution.variables().size(), solution.objectives().length, solution.constraints().length);
+    
+    problem = solution.problem ;
+
+    for (int i = 0; i < variables().size(); i++) {
       List<Integer> gapsGroup = new ArrayList();
       for (int j = 0; j < solution.variables().get(i).size(); j++)
         gapsGroup.add(solution.variables().get(i).get(j));
@@ -61,12 +69,52 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
     }
 
     attributes = new HashMap(solution.attributes);
-
-
   }
 
 
-  public void encode(List<AAArray> alignedSequences) {
+  public StructuralTM_MSASolution copy() {
+    return new StructuralTM_MSASolution(this);
+  }
+
+  public boolean isResidueInTM(int seqIdx, int seqPos1Based) {
+
+    // Si es gap o inválido → no es TM
+    if (seqPos1Based <= 0) {
+        return false;
+    }
+
+    // Secuencia original (sin gaps)
+    AAArray original = getOriginalSequences().get(seqIdx);
+
+    int pos0 = seqPos1Based - 1; // convertir a 0-based
+
+    // Seguridad adicional
+    if (pos0 < 0 || pos0 >= original.getSize()) {
+        return false;
+    }
+
+    AA aa = original.AAAt(pos0);
+
+    if (aa == null) {
+        return false;
+    }
+
+    if (aa.getType() == null) {
+        return false;
+    }
+
+    return aa.getType().isTMRegion();
+}
+
+
+   public float[][] getDistanceMatrixByIndex(int index) {     return problem.getDistanceMatrixByIndex(index);  }
+
+   public StructuralTMMSAProblem getStructuralTMMSAProblem() {
+    return this.problem;
+  }
+
+
+   public void encode(List<AAArray> alignedSequences) {
     for (int i = 0; i < alignedSequences.size(); i++) {
       variables().set(i, getGapsGroup(alignedSequences.get(i)));
     }
@@ -125,18 +173,21 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
     while (i < size) {
       if (g < gapsGroups.size()) {
         if (i < gapsGroups.get(g)) {
-          alignedSequence[i++] = OriginalSeq[k++];
+          alignedSequence[i++] = new AA(OriginalSeq[k++]);
         } else {
           for (l = gapsGroups.get(g); l <= gapsGroups.get(g + 1); l++) {
-            alignedSequence[l] = new AA(AA.GAP_IDENTIFIER,
-                    OriginalSeq[k > 0 ? k-1 : 0].getType(),
-                    OriginalSeq[k < OriginalSeq.length ? k : k-1].getType());
+                AA gap = new AA(AA.GAP_IDENTIFIER,
+                                OriginalSeq[k > 0 ? k-1 : 0].getType(),
+                                OriginalSeq[k < OriginalSeq.length ? k : k-1].getType());
+                gap.setSeqIndex(-1);
+                gap.setStructIndex(-1);
+                alignedSequence[l] = gap;
           }
           i += gapsGroups.get(g + 1) - gapsGroups.get(g) + 1;
           g += 2;
         }
       } else {
-        alignedSequence[i++] = OriginalSeq[k++];
+        alignedSequence[i++] = new AA(OriginalSeq[k++]);
       }
     }
 
@@ -289,14 +340,14 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
     return this.problem.originalSequences;
   }
 
-  public StandardTMMSAProblem getMSAProblem() {
-    return this.problem;
-  }
+  public StructuralTMMSAProblem getMSAProblem() {    return this.problem;  }
 
   public boolean isValid() {
     int sizeAlignment = getAlignmentLength();
     for (int k = 1; k < variables().size(); k++) {
-      if (sizeAlignment != getOriginalSequences().get(k).getSize() + getNumberOfGaps(k)) {
+      int size1 = getOriginalSequences().get(k).getSize();
+      int size2 = getNumberOfGaps(k);
+      if (sizeAlignment !=  size1 + size2 ) {
 
         JMetalLogger.logger.warning(
             "Error Solution, "
@@ -312,10 +363,6 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
     }
 
     return true;
-  }
-
-  public TM_MSASolution copy() {
-    return new TM_MSASolution(this);
   }
 
   /*
@@ -354,13 +401,16 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
 
   @Override
   public String toString() {
-    AA[][] sequences = decodeToMatrix();
+    /*AA[][] sequences = decodeToMatrix();
     String alignment = "";
+    String topologies = "";
 
-    alignment="var fasta='';\n";
+    alignment = "var fasta='';\n";
+    topologies = "var topologies = [";
     for (int i = 0; i < variables().size(); i++) {
       alignment += "fasta = fasta + '>" + attributes().get("SeqName" + i).toString().trim() + "\\n';\n";
       alignment += "fasta = fasta + '";
+      topologies += "[";
       int compoundCount = 0;
       for (int j = 0; j < sequences[i].length; j++) {
         alignment += sequences[i][j].toString();
@@ -371,18 +421,27 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
             alignment += "fasta = fasta + '";
           compoundCount = 0;
         }
+        topologies += "'" + sequences[i][j].getType().getAbrev() + "'";
+        if(j < sequences[i].length - 1) topologies += ",";
       }
+
+      topologies += "]";
+      if(i < variables().size() - 1) topologies += ",";
+      topologies += "\n";
 
       if (sequences[i].length % 60 != 0) {
         alignment += "\\n';\n";
       }
     }
+    topologies += "]";
 
-    /*AA[][] sequences = decodeToMatrix();
+    return alignment +  "\n" + topologies;*/
+
+    AA[][] sequences = decodeToMatrix();
     String alignment = "";
 
     for (int i = 0; i < variables().size(); i++) {
-      alignment += ">" + attributes().get("SeqName" + i).toString() + "\n";
+      alignment += ">" + attributes().get("SeqName" + i).toString().trim() + "\n";
       int compoundCount = 0;
       for (int j = 0; j < sequences[i].length; j++) {
         alignment += sequences[i][j].toString();
@@ -392,10 +451,12 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
           compoundCount = 0;
         }
       }
-
       if (sequences[i].length % 60 != 0) {
         alignment += "\n";
-      }*/
+      }
+    }
+
+    return alignment;
 
      /* compoundCount = 0;
       for (int j = 0; j < sequences[i].length; j++) {
@@ -412,15 +473,20 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
       }*/
 
 
-    return alignment;
+
   }
 
   /** Write the MultipleSequenceAlignmentSolution in Fasta format */
-  /* public void printSolutionToFasta(String fileName) throws Exception {
+   public void printSolutionToFasta(String filePath)  {
 
-    List<ProteinSequence> proteinSequenceList = convertSolutionToProteinSequenceList();
-    FastaWriterHelper.writeProteinSequence(new File(fileName), proteinSequenceList);
-  }*/
+     try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+       writer.write(this.toString());
+     } catch (IOException e) {
+       JMetalLogger.logger.warning("Error creating FASTA file: " + filePath);
+     }
+
+
+  }
 
   /** Create a Protein sequence list from the sequences stored in the variables */
   /*public List<ProteinSequence> convertSolutionToProteinSequenceList() throws Exception {
@@ -444,5 +510,55 @@ public class TM_MSASolution extends AbstractSolution<List<Integer>> {
     return problem.getSizeOfOriginalSequence(0) + getNumberOfGaps(0);
   }
 
+  /**
+ * col: alignment column (0-based)
+ * returns: seq position in original ungapped sequence (1-based), or -1 if this column is a gap.
+ */
+  public int getSeqPos1BasedAtColumn(int seqIdx, int col) {
+    List<Integer> gg = variables().get(seqIdx);
+    if (gg == null || gg.isEmpty()) {
+      return col + 1; // no gaps
+    }
+
+    int gapsBefore = 0;
+
+    for (int j = 0; j < gg.size(); j += 2) {
+      int gStart = gg.get(j);
+      int gEnd   = gg.get(j + 1);
+
+      if (col < gStart) break;     // no more gaps before col
+      if (col <= gEnd) return -1;  // col is a gap
+
+      gapsBefore += (gEnd - gStart + 1);
+    }
+
+    return (col + 1) - gapsBefore;
+  }
+
+  public boolean isTMAtColumn(int seqIdx, int col) {
+      int pos1 = getSeqPos1BasedAtColumn(seqIdx, col);
+      if (pos1 <= 0) return false; // gap
+
+      int pos0 = pos1 - 1;
+      AAArray original = getOriginalSequences().get(seqIdx);
+
+      if (pos0 < 0 || pos0 >= original.getSize()) return false;
+
+      AA aa = original.AAAt(pos0);
+      return aa != null && aa.getType() != null && aa.getType().isTMRegion();
+}
+
+/**
+ * Column risk indicator R(c): true if the cut at column c may sever a TM helix
+ * (simple version: if any sequence has a TM residue at that column).
+ */
+  public boolean riskIndicatorR(int col) {
+    for (int s = 0; s < variables().size(); s++) {
+      if (isTMAtColumn(s, col)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
 }
