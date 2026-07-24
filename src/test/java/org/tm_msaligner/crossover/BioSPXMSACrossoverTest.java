@@ -75,6 +75,33 @@ class BioSPXMSACrossoverTest {
   }
 
   @Test
+  void rejectsACutThatIsSafeInParentAButUnsafeInParentB() throws Exception {
+    Fixture safeTopologyFixture = createFixture(
+        "OOMMOO",
+        List.of("AAAAAA", "AAAAAA"),
+        List.of("AAAAAA", "AAAAAA"));
+
+    Fixture tmOnlyFixture = createFixture(
+        "MMMMMM",
+        List.of("AAAAAA", "AAAAAA"),
+        List.of("AAAAAA", "AAAAAA"));
+
+    BioSPXMSACrossover crossover = new BioSPXMSACrossover(1.0, 0.8);
+
+    /* After residue 2, parentA has an O-M boundary and is safe. */
+    assertTrue(crossover.isCompatibleCut(
+        safeTopologyFixture.parentA,
+        safeTopologyFixture.parentB,
+        1));
+
+    /* The equivalent boundary in parentB is M-M and must invalidate the cut. */
+    assertFalse(crossover.isCompatibleCut(
+        safeTopologyFixture.parentA,
+        tmOnlyFixture.parentB,
+        1));
+  }
+
+  @Test
   void neverFallsBackToAnUnsafeRandomCut() throws Exception {
     Fixture fixture = createFixture(
         "MMMMMM",
@@ -139,10 +166,12 @@ class BioSPXMSACrossoverTest {
       throw new IllegalArgumentException("The fixture requires exactly two sequences");
     }
 
-    Path datasetFile = tempDirectory.resolve("fixture_predicted_topologies.3line");
-    Path distanceDirectory = Files.createDirectories(tempDirectory.resolve("distances"));
-    Path firstFasta = tempDirectory.resolve("parentA.fasta");
-    Path secondFasta = tempDirectory.resolve("parentB.fasta");
+    String fixtureId = "fixture_" + System.nanoTime();
+    Path fixtureDirectory = Files.createDirectories(tempDirectory.resolve(fixtureId));
+    Path datasetFile = fixtureDirectory.resolve("fixture_predicted_topologies.3line");
+    Path distanceDirectory = Files.createDirectories(fixtureDirectory.resolve("distances"));
+    Path firstFasta = fixtureDirectory.resolve("parentA.fasta");
+    Path secondFasta = fixtureDirectory.resolve("parentB.fasta");
 
     String sequence = "AAAAAA";
     String dataset = ">seq1\n"
