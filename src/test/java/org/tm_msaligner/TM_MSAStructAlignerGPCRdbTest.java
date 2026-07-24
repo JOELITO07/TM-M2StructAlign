@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.uma.jmetal.util.errorchecking.JMetalException;
+import org.uma.jmetal.util.pseudorandom.JMetalRandom;
 
 class TM_MSAStructAlignerGPCRdbTest {
 
@@ -45,6 +46,12 @@ class TM_MSAStructAlignerGPCRdbTest {
   }
 
   @Test
+  void initializesTheGlobalJMetalGeneratorWithTheExplicitSeed() {
+    TM_MSAStructAlignerGPCRdb.initializeRandomSeed(147L);
+    assertEquals(147L, JMetalRandom.getInstance().getSeed());
+  }
+
+  @Test
   void rejectsTheOldEightArgumentInvocationWithoutASeed() {
     String[] arguments = {
         "C:\\datasets\\GPCRdb",
@@ -73,7 +80,7 @@ class TM_MSAStructAlignerGPCRdbTest {
     TM_MSAStructAlignerGPCRdb.writeRuntimeFile(
         temporaryDirectory,
         12345L,
-        2500);
+        2500L);
 
     String seedText = Files.readString(
         temporaryDirectory.resolve("seed.txt"),
