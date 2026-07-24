@@ -47,7 +47,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
      * therefore consume the same pseudo-random sequence when the same seed and
      * configuration are used.
      */
-    JMetalRandom.getInstance().setSeed(configuration.seed());
+    initializeRandomSeed(configuration.seed());
 
     Path distanceDirectory = Paths.get(
         configuration.dataDirectory(),
@@ -193,9 +193,12 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
           Long.parseLong(args[8]));
     } catch (NumberFormatException exception) {
       throw new JMetalException(
-          "Invalid numeric argument: " + exception.getMessage() + ".\n" + USAGE,
-          exception);
+          "Invalid numeric argument: " + exception.getMessage() + ".\n" + USAGE);
     }
+  }
+
+  static void initializeRandomSeed(long seed) {
+    JMetalRandom.getInstance().setSeed(seed);
   }
 
   static void writeSeedFile(Path outputFolder, long seed) throws IOException {
@@ -208,7 +211,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
   static void writeRuntimeFile(
       Path outputFolder,
       long runtimeMilliseconds,
-      int evaluations) throws IOException {
+      long evaluations) throws IOException {
 
     String content = "runtime_ms\t" + runtimeMilliseconds + System.lineSeparator()
         + "runtime_seconds\t"
