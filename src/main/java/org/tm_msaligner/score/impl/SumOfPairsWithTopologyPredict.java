@@ -60,9 +60,9 @@ public class SumOfPairsWithTopologyPredict implements Score {
           if(aaA.isGap() || aaB.isGap()) {
               if(!gapOpen) {
                 gapOpen=true;
-                tmSOP -=  aaA.getType().isTMRegion()?weightGapOpenTM:weightGapOpenNonTM;
+                tmSOP -=  (aaA.getType().isTMRegion() || aaB.getType().isTMRegion())?weightGapOpenTM:weightGapOpenNonTM;
               }else{
-                tmSOP -= aaA.getType().isTMRegion()?weightGapExtendTM:weightGapExtendNonTM;
+                tmSOP -= (aaA.getType().isTMRegion() || aaB.getType().isTMRegion())?weightGapExtendTM:weightGapExtendNonTM;
               }
           }else {
             if (aaA.getType().isTMRegion() && aaB.getType().isTMRegion())

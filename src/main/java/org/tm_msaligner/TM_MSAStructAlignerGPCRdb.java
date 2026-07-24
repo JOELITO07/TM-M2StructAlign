@@ -1,6 +1,7 @@
 package org.tm_msaligner;
 
-
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.tm_msaligner.algorithm.multiobjective.TM_M2AlignBuilder;
 import org.tm_msaligner.algorithm.structural_multiobjective.StructuralTM_M2Align;
 import org.tm_msaligner.algorithm.structural_multiobjective.StructuralTM_M2AlignBuilder;
@@ -44,19 +45,20 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
     public static void main(String[] args) throws JMetalException, IOException {
 
         //Parameters
-        /*if (args.length != 7) {
+        if (args.length != 7) {
             throw new JMetalException("Wrong number of arguments") ;
-        }*/
+        }
 
-        String dataDirectory = "D:\\Nube\\TM-MSA\\Datasets\\GPCRdb" ; // args[0]; // "data/gpcrdb/classA"
-        String problemName = "classT2"; // args[1]; // "classA"
-        Integer maxEvaluations = 2500; //Integer.parseInt(args[2]);  //25000
-        Integer populationSize = 100; //Integer.parseInt(args[3]); //100
-        Integer numberOfCores = 1;   //Integer.parseInt(args[4]);   //1
-        //0: Ninguno 1: FitnessWriteFileObserver, 2: FitnessPlotObserver y 3: FrontPlotTM_MSAObserve
-        int observerType = 1; //Integer.parseInt(args[5]);
-        int frequencyObserver = 20; //Integer.parseInt(args[6]);*/
-        String distanceDir = dataDirectory + "\\distances\\" + problemName;
+        String dataDirectory = args[0]; // "D:\\Nube\\TM-MSA\\Datasets\\GPCRdb" ; //  // "data/gpcrdb/classA"
+        String problemName = args[1]; // "classF"; //  // "classA"
+        Integer maxEvaluations = Integer.parseInt(args[2]); // 2500; //Integer.parseInt(args[2]);  //25000
+        Integer populationSize = Integer.parseInt(args[3]); //100
+        Integer numberOfCores = Integer.parseInt(args[4]);   //1
+        int frequencyObserver = Integer.parseInt(args[5]); //Integer.parseInt(args[6]);*/
+        String numberTest = args[6]; //Integer.parseInt(args[6]);*/
+        
+        Path disPath = Paths.get(dataDirectory,"distances", problemName);
+        String distanceDir = disPath.toString();
 
         //Algorithm  Parameters
         double probabilityCrossover=0.8;
@@ -67,14 +69,12 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         var weightGapOpenNonTM = 3;
         var weightGapExtendNonTM = 1;
 
-        String dataFile = dataDirectory + "\\sequences\\tmregions\\" + problemName +"_predicted_topologies.3line";
-        String outputFolder = dataDirectory + "results" + System.currentTimeMillis() + "/";
-        if (!new File(outputFolder).mkdirs()){
-            throw new JMetalException("Error creating Output Directory " + outputFolder) ;
-        }
+        Path dataFilePath = Paths.get(dataDirectory,"sequences","tmregions", problemName + "_predicted_topologies.3line");
+        Path outputFolder = Paths.get(dataDirectory, "ejecuciones", problemName, numberTest );
+        Path precomputedFolder = Paths.get(dataDirectory, "precomputed", problemName);
 
 
-        List<String> preComputedFiles = getFastaFileNameListFromDir(dataDirectory +"\\precomputed\\" + problemName + "\\");
+        List<String> preComputedFiles = getFastaFileNameListFromDir(precomputedFolder.toString());
         if(preComputedFiles.size()<2){
             throw new JMetalException("Wrong number of Pre-computed Alignments, Minimum 2 files are required") ;
         }
@@ -92,7 +92,7 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         scoreList.add(new LDDTStructuralScore(  15.0f)     );
 
 
-        MultiObjStructuralTMMSAProblem problem = new MultiObjStructuralTMMSAProblem(dataFile, scoreList,
+        MultiObjStructuralTMMSAProblem problem = new MultiObjStructuralTMMSAProblem(dataFilePath.toString(), scoreList,
                                                                  preComputedFiles,  distanceDir, problemName);
 
         System.out.println("Problem loaded successfully!");
@@ -112,28 +112,16 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
                             numberOfCores)
                             .build();
 
-
-        if(observerType>=1 && observerType<=3){
-
-            if(frequencyObserver> maxEvaluations){
-                throw new JMetalException("The frequency of the Observer can`t be greater than Maximun number of Evaluations") ;
-            }
-
-            Observer chartObserver;
-            chartObserver = new StructTM_MSAFitnessWriteFileObserver(outputFolder + "BestScores.tsv", frequencyObserver);
-           
-           /* if(observerType==1) {
-                chartObserver = new TM_MSAFitnessWriteFileObserver(outputFolder + "BestScores.tsv", 100);
-            } else if (observerType==2) {
-               // chartObserver = new TM_MSAFitnessPlotObserver("TM-M2Aligner solving Instance " + problemName ,
-               //         "Evaluations", scoreList.get(0).getName(), scoreList.get(0).getName(), frequencyObserver, 0);
-            }else{
-               // chartObserver = new FrontPlotTM_MSAObserver<TM_MSASolution>("", "SumOfPairsWithTopologyPredict",
-               //         "AlignedSegment", problemName, frequencyObserver);
-            }*/
-
-            tm_m2align.observable().register(chartObserver);
+        
+        if (!new File(outputFolder.toString()).mkdirs()){
+            throw new JMetalException("Error creating Output Directory " + outputFolder.toString()) ;
         }
+
+        Observer chartObserver;
+        chartObserver = new StructTM_MSAFitnessWriteFileObserver(outputFolder.resolve("BestScores.tsv").toString(), frequencyObserver);
+        tm_m2align.observable().register(chartObserver);
+
+       
 
 
        tm_m2align.run();
@@ -148,13 +136,13 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
         JMetalLogger.logger.info("Total execution time : " + tm_m2align.totalComputingTime() + "ms");
         JMetalLogger.logger.info("Number of evaluations: " + tm_m2align.numberOfEvaluations()) ;
 
-        DefaultFileOutputContext funFile = new DefaultFileOutputContext(outputFolder + "FUN.tsv");
+        DefaultFileOutputContext funFile = new DefaultFileOutputContext(outputFolder.resolve("FUN.tsv").toString());
         funFile.setSeparator("\t");
 
         SolutionListOutput slo = new SolutionListOutput(population);
         slo.printObjectivesToFile(funFile, population);
 
-        printMSASolutionsToFile(population, outputFolder);
+        printMSASolutionsToFile(population, outputFolder.toString());
         
 
 
@@ -179,14 +167,19 @@ public class TM_MSAStructAlignerGPCRdb extends AbstractAlgorithmRunner {
 
         File[] Text_Files = File_Directory.listFiles(Demo_Filefilter);
         for (File Demo_File: Text_Files)
-            preComputedFiles.add(dataDirectory + Demo_File.getName());
+            preComputedFiles.add(Paths.get(dataDirectory, Demo_File.getName()).toString());
+        
 
 
         return preComputedFiles;
     }
 
     public static void printMSASolutionsToFile(List<StructuralTM_MSASolution> solutionList, String PathOut) {
-        for (int i = 0; i < solutionList.size(); i++)
-            solutionList.get(i).printSolutionToFasta(PathOut + "MSASol" + i + ".fasta");
+
+        Path outDir = Paths.get(PathOut);
+        for (int i = 0; i < solutionList.size(); i++){
+            Path outFile = outDir.resolve("MSASol" + i + ".fasta");
+            solutionList.get(i).printSolutionToFasta(outFile.toString());
+        }
     }
 }
