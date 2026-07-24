@@ -1,132 +1,224 @@
 package org.tm_msaligner.score.impl;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.tm_msaligner.score.StructuralScore;
 import org.tm_msaligner.solution.StructuralTM_MSASolution;
 import org.tm_msaligner.util.AA;
 
+/**
+ * Reference-free structural consistency score inspired by FoldMason MSTA lDDT.
+ *
+ * <p>The score is evaluated in both directions for every structure pair. Every
+ * structural neighbour of the query residue inside {@code R0} remains in the
+ * denominator, even when that neighbour is not aligned in the target. Pairwise
+ * residue scores are mapped back to MSA columns, combined with column occupancy
+ * through a harmonic mean, and normalized by the complete alignment length.</p>
+ */
 public class LDDTStructuralScore implements StructuralScore {
 
-  
-  private final float R0;                
-  private final float[] T = new float[]{0.5f, 1.0f, 2.0f, 4.0f};
+  private final float R0;
+  private final float[] thresholds = new float[] {0.5f, 1.0f, 2.0f, 4.0f};
 
   public LDDTStructuralScore(float R0) {
-      this.R0 = R0;
+    this.R0 = R0;
   }
 
   @Override
   public <S extends StructuralTM_MSASolution> double compute(S solution, AA[][] msa) {
+    int numberOfSequences = solution.variables().size();
+    int alignmentLength = solution.getAlignmentLength();
 
-    int M = solution.variables().size();
-    int L = solution.getAlignmentLength();
+    if (numberOfSequences < 2 || alignmentLength == 0) {
+      return 0.0;
+    }
 
-    double sumPairs = 0.0;
-    int countPairs = 0;
+    double[] columnScoreSum = new double[alignmentLength];
+    int[] columnScoreCount = new int[alignmentLength];
+    int[] residuesPerColumn = new int[alignmentLength];
 
-    for (int a = 0; a < M - 1; a++) {
-      float[][] DA = ((StructuralTM_MSASolution) solution).getDistanceMatrixByIndex(a);
-      if (DA == null) continue;
+    @SuppressWarnings("unchecked")
+    Map<Integer, Integer>[] structToColumn = new Map[numberOfSequences];
 
-      for (int b = a + 1; b < M; b++) {
-        float[][] DB = ((StructuralTM_MSASolution) solution).getDistanceMatrixByIndex(b);
-        if (DB == null) continue;
+    for (int sequence = 0; sequence < numberOfSequences; sequence++) {
+      structToColumn[sequence] = buildStructToColumnMap(msa[sequence]);
+      for (int column = 0; column < alignmentLength; column++) {
+        if (!msa[sequence][column].isGap()) {
+          residuesPerColumn[column]++;
+        }
+      }
+    }
 
-        // score del par
-        double sumCols = 0.0;
-        int countCols = 0;
+    // Ordered pairs evaluate A->B and B->A, making the final score symmetric.
+    for (int query = 0; query < numberOfSequences; query++) {
+      float[][] queryDistances = solution.getDistanceMatrixByIndex(query);
+      if (queryDistances == null) {
+        continue;
+      }
 
-        for (int k = 0; k < L; k++) {
-          AA aaA = msa[a][k];
-          AA aaB = msa[b][k];
+      for (int target = 0; target < numberOfSequences; target++) {
+        if (query == target) {
+          continue;
+        }
 
-          if (aaA.isGap() || aaB.isGap()) continue;
+        float[][] targetDistances = solution.getDistanceMatrixByIndex(target);
+        if (targetDistances == null) {
+          continue;
+        }
 
-          int iA = aaA.getStructIndex();
-          int iB = aaB.getStructIndex();
-          if (iA < 0 || iB < 0) continue;
+        for (int column = 0; column < alignmentLength; column++) {
+          AA queryAnchor = msa[query][column];
+          AA targetAnchor = msa[target][column];
 
-          // lDDT local para columna k (usando vecinos por columnas l)
-          double colScore = lddtColumn(DA, DB, msa[a], msa[b], iA, iB, k, L);
-          if (colScore >= 0.0) { // -1 si no hubo comparables
-            sumCols += colScore;
-            countCols++;
+          if (queryAnchor.isGap() || targetAnchor.isGap()) {
+            continue;
+          }
+
+          int queryAnchorIndex = queryAnchor.getStructIndex();
+          int targetAnchorIndex = targetAnchor.getStructIndex();
+          if (queryAnchorIndex < 0 || targetAnchorIndex < 0) {
+            continue;
+          }
+
+          double score = directionalLddt(
+              queryDistances,
+              targetDistances,
+              msa[target],
+              structToColumn[query],
+              queryAnchorIndex,
+              targetAnchorIndex);
+
+          if (!Double.isNaN(score)) {
+            columnScoreSum[column] += score;
+            columnScoreCount[column]++;
           }
         }
-
-        if (countCols > 0) {
-          sumPairs += (sumCols / countCols);
-          countPairs++;
-        }
       }
     }
 
-    if (countPairs == 0) return 0.0;
-    return sumPairs / countPairs; // en [0,1], más alto mejor
+    double total = 0.0;
+    for (int column = 0; column < alignmentLength; column++) {
+      double occupancy = residuesPerColumn[column] / (double) numberOfSequences;
+      double structuralScore = columnScoreCount[column] == 0
+          ? 0.0
+          : columnScoreSum[column] / columnScoreCount[column];
+
+      if (occupancy > 0.0 && structuralScore > 0.0) {
+        total += 2.0 * structuralScore * occupancy / (structuralScore + occupancy);
+      }
+    }
+
+    // Columns without structural support contribute zero, preserving coverage sensitivity.
+    return total / alignmentLength;
   }
 
-  private double lddtColumn(float[][] DA, float[][] DB,
-                            AA[] alnA, AA[] alnB,
-                            int iA, int iB, int k, int L) {
+  /**
+   * Computes query-to-target lDDT for one aligned anchor pair.
+   * All query neighbours within R0 are included in the denominator. A missing,
+   * gapped, or structurally unmapped target neighbour contributes zero.
+   */
+  private double directionalLddt(
+      float[][] queryDistances,
+      float[][] targetDistances,
+      AA[] targetAlignment,
+      Map<Integer, Integer> queryStructToColumn,
+      int queryAnchorIndex,
+      int targetAnchorIndex) {
 
-    // counts por umbral
-    int[] preserved = new int[T.length];
-    int[] comparable = new int[T.length];
-
-    for (int l = 0; l < L; l++) {
-      if (l == k) continue;
-
-      AA a2 = alnA[l];
-      AA b2 = alnB[l];
-      if (a2.isGap() || b2.isGap()) continue;
-
-      int jA = a2.getStructIndex();
-      int jB = b2.getStructIndex();
-      if (jA < 0 || jB < 0) continue;
-
-      float dA = DA[iA][jA];
-      if (dA > R0) continue; // vecindad definida en A
-
-      float dB = DB[iB][jB];
-      float diff = Math.abs(dA - dB);
-
-      for (int t = 0; t < T.length; t++) {
-        comparable[t]++;
-        if (diff <= T[t]) preserved[t]++;
-      }
+    if (queryAnchorIndex >= queryDistances.length
+        || targetAnchorIndex >= targetDistances.length) {
+      return Double.NaN;
     }
 
-    // si no hay comparables, no contribuye
-    int validTs = 0;
-    double sumFrac = 0.0;
+    double scoreSum = 0.0;
+    int neighbourCount = 0;
 
-    for (int t = 0; t < T.length; t++) {
-      if (comparable[t] > 0) {
-        sumFrac += (preserved[t] / (double) comparable[t]);
-        validTs++;
+    for (int queryNeighbourIndex = 0;
+         queryNeighbourIndex < queryDistances[queryAnchorIndex].length;
+         queryNeighbourIndex++) {
+
+      if (queryNeighbourIndex == queryAnchorIndex) {
+        continue;
       }
+
+      float queryDistance = queryDistances[queryAnchorIndex][queryNeighbourIndex];
+      if (!Float.isFinite(queryDistance) || queryDistance >= R0) {
+        continue;
+      }
+
+      // The complete query neighbourhood defines the denominator.
+      neighbourCount++;
+
+      Integer neighbourColumn = queryStructToColumn.get(queryNeighbourIndex);
+      if (neighbourColumn == null
+          || neighbourColumn < 0
+          || neighbourColumn >= targetAlignment.length) {
+        continue;
+      }
+
+      AA targetNeighbour = targetAlignment[neighbourColumn];
+      if (targetNeighbour.isGap() || targetNeighbour.getStructIndex() < 0) {
+        continue;
+      }
+
+      int targetNeighbourIndex = targetNeighbour.getStructIndex();
+      if (targetNeighbourIndex >= targetDistances[targetAnchorIndex].length) {
+        continue;
+      }
+
+      float targetDistance = targetDistances[targetAnchorIndex][targetNeighbourIndex];
+      if (!Float.isFinite(targetDistance)) {
+        continue;
+      }
+
+      scoreSum += thresholdScore(Math.abs(queryDistance - targetDistance));
     }
 
-    if (validTs == 0) return -1.0;
-    return sumFrac / validTs;
+    return neighbourCount == 0 ? Double.NaN : scoreSum / neighbourCount;
+  }
+
+  private double thresholdScore(double difference) {
+    int preserved = 0;
+    for (float threshold : thresholds) {
+      if (difference < threshold) {
+        preserved++;
+      }
+    }
+    return preserved / (double) thresholds.length;
+  }
+
+  private Map<Integer, Integer> buildStructToColumnMap(AA[] alignedSequence) {
+    Map<Integer, Integer> map = new HashMap<>();
+    for (int column = 0; column < alignedSequence.length; column++) {
+      AA aa = alignedSequence[column];
+      if (!aa.isGap() && aa.getStructIndex() >= 0) {
+        map.putIfAbsent(aa.getStructIndex(), column);
+      }
+    }
+    return map;
   }
 
   @Override
-  public boolean isAMinimizationScore() { return false; }
+  public boolean isAMinimizationScore() {
+    return false;
+  }
 
   @Override
-  public String name() { return "lDDT_structural"; }
+  public String name() {
+    return "lDDT_structural";
+  }
 
   @Override
   public String description() {
-    return "Reference-free lDDT structural consistency over MSA" ;
+    return "Symmetric, coverage-aware reference-free MSTA lDDT structural consistency";
   }
 
-  public String getDescription() { return description(); }
+  public String getDescription() {
+    return description();
+  }
 
   @Override
   public String getName() {
     return name();
   }
-
-
 }
