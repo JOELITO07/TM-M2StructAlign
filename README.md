@@ -41,6 +41,8 @@ The major innovation is the **Structural Aware Alignment** module, which incorpo
 6. **Result generation and analysis**
    - Outputs in TSV, FASTA, and MSF formats.
    - Computation of reference fronts (`referenceFronts/*.csv`).
+   - Batch evaluation against GPCRdb references with Pair F1, TM-Pair F1,
+     and TM-gap rate (see [`docs/evaluation-metrics.md`](docs/evaluation-metrics.md)).
 
 ## Installation
 
@@ -118,4 +120,3 @@ Developed as part of the transmembrane structural alignment initiative.
 ---
 
 > 📝 **Note:** The project’s focus is on the Structural Aware Alignment module; the README details its components, activation, and recent modifications.
-
