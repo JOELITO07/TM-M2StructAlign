@@ -26,24 +26,12 @@ public final class BaselineMain {
   private static final Path DEFAULT_PRECOMPUTED_ROOT = Path.of(
       "C:\\GDrive2026\\TM-MSA\\Datasets\\GPCRdb\\precomputed");
 
-  private BaselineMain() {
-  }
 
   public static void main(String[] args) throws IOException {
-    if (args.length > 3) {
-      System.err.println("Usage: BaselineMain [precomputedRoot] [gpcrdbRoot] [outputCsv]");
-      System.exit(2);
-    }
 
-    Path precomputedRoot = args.length >= 1
-        ? Path.of(args[0]).toAbsolutePath().normalize()
-        : DEFAULT_PRECOMPUTED_ROOT.toAbsolutePath().normalize();
-    Path gpcrdbRoot = args.length >= 2
-        ? Path.of(args[1]).toAbsolutePath().normalize()
-        : precomputedRoot.getParent();
-    Path output = args.length >= 3
-        ? Path.of(args[2]).toAbsolutePath().normalize()
-        : precomputedRoot.resolve("baselines.csv");
+    Path precomputedRoot = (DEFAULT_PRECOMPUTED_ROOT.toAbsolutePath().normalize());
+    Path gpcrdbRoot = precomputedRoot.getParent();
+    Path output = precomputedRoot.resolve("baselines.csv");
 
     requireDirectory(precomputedRoot, "precomputed root");
     requireDirectory(gpcrdbRoot, "GPCRdb root");
